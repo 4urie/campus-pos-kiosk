@@ -162,7 +162,7 @@ export default function Cart({
       </div>
 
       {/* Financial totals & checkout */}
-      <div className="flex-none space-y-3 border-t border-slate-200 bg-slate-50 p-5">
+      <div className="flex-none space-y-4 border-t border-slate-200 bg-slate-50 p-5">
         <div className="space-y-1.5 text-xs font-medium text-slate-600">
           <div className="flex justify-between">
             <span>Subtotal</span>
@@ -186,20 +186,35 @@ export default function Cart({
             {formatPeso(total)}
           </span>
         </div>
-        {/* Primary touch action: continue to payment */}
+        {/* Primary touch action: continue to payment. Big tap target with
+            the amount to pay inside the CTA so the action and its cost
+            read as one hierarchy unit. */}
         <button
           type="button"
           data-testid="continue-to-payment"
           onClick={onContinue}
           aria-disabled={isEmpty}
-          className={`touch-ripple flex h-16 w-full items-center justify-center gap-2 rounded-2xl text-base font-extrabold tracking-wide transition ${
+          className={`touch-ripple flex h-[68px] w-full items-center justify-between gap-3 rounded-2xl px-5 text-left transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/40 ${
             isEmpty
-              ? "bg-slate-300 text-slate-500"
+              ? "bg-slate-200 text-slate-400"
               : "bg-brand-600 text-white shadow-lg shadow-brand-600/30 hover:bg-brand-700 active:bg-brand-800"
           }`}
         >
-          <span>Continue to Payment</span>
-          <ArrowRight className="h-5 w-5 text-white/90" strokeWidth={2.5} aria-hidden="true" />
+          <span className="flex items-center gap-2.5 text-lg font-extrabold tracking-wide">
+            Continue to Payment
+            <ArrowRight
+              className={`h-5 w-5 ${isEmpty ? "text-slate-400" : "text-white/90"}`}
+              strokeWidth={2.5}
+              aria-hidden="true"
+            />
+          </span>
+          <span
+            className={`flex-none rounded-xl px-3 py-1.5 text-base font-black tabular-nums ${
+              isEmpty ? "bg-slate-300/70 text-slate-500" : "bg-white/20 text-white"
+            }`}
+          >
+            {formatPeso(total)}
+          </span>
         </button>
         {/* Payment method badges / microcopy */}
         <p className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-slate-400">
