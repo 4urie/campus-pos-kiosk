@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import ProductCard from "./ProductCard";
 import { CATEGORIES, PRODUCTS } from "@/lib/products";
 import type { Product, ProductCategory } from "@/lib/types";
@@ -20,6 +20,33 @@ interface CatalogProps {
 export default function Catalog({ getQuantity, onAdd }: CatalogProps) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
+  const navRef = useRef<HTMLElement>(null);
+  const [navScroll, setNavScroll] = useState({ canLeft: false, canRight: false });
+
+  // Track whether the category row can scroll so the edge fades and
+  // chevron buttons only appear when there is more content to reach.
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const update = () =>
+      setNavScroll({
+        canLeft: el.scrollLeft > 1,
+        canRight: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+      });
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    // Re-measure once webfonts finish loading; they change pill widths.
+    document.fonts?.ready.then(update).catch(() => {});
+    return () => {
+      el.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  const scrollCategories = (direction: -1 | 1) => {
+    navRef.current?.scrollBy({ left: direction * 220, behavior: "smooth" });
+  };
 
   const visibleProducts = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -65,41 +92,81 @@ export default function Catalog({ getQuantity, onAdd }: CatalogProps) {
         </div>
       </div>
 
-      {/* Category filter tabs */}
-      <nav
-        aria-label="Product Categories"
-        className="no-scrollbar flex flex-none items-center gap-2.5 overflow-x-auto pb-3"
-      >
-        {CATEGORIES.map((cat) => {
-          const active = category === cat.id;
-          return (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setCategory(cat.id)}
-              aria-pressed={active}
-              className={`touch-ripple inline-flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm transition ${
-                active
-                  ? "bg-brand-700 font-semibold text-white shadow-sm"
-                  : "border border-slate-200 bg-white font-medium text-slate-700 shadow-xs hover:border-slate-300 hover:bg-slate-50"
-              }`}
-            >
-              <span>
-                {cat.emoji} {cat.label}
-              </span>
-              {cat.id === "all" && (
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs ${
-                    active ? "bg-brand-900/40 text-emerald-100" : "bg-slate-100 text-slate-500"
-                  }`}
-                >
-                  {PRODUCTS.length}
+      {/* Category filter tabs — one horizontal row; long names wrap inside
+          a capped pill instead of stretching it, and the row scrolls
+          (with edge fades + chevrons) when the screen is too narrow. */}
+      <div className="relative flex-none">
+        <nav
+          ref={navRef}
+          aria-label="Product Categories"
+          className="no-scrollbar flex items-stretch gap-2 overflow-x-auto pb-2 pt-1"
+        >
+          {CATEGORIES.map((cat) => {
+            const active = category === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setCategory(cat.id)}
+                aria-pressed={active}
+                className={`touch-ripple inline-flex min-h-12 max-w-40 flex-none items-center gap-2 rounded-xl border px-3 py-2 text-sm leading-tight transition ${
+                  active
+                    ? "border-brand-700 bg-brand-700 font-semibold text-white shadow-sm ring-2 ring-brand-700/25"
+                    : "border-slate-200 bg-white font-medium text-slate-700 shadow-xs hover:border-slate-300 hover:bg-slate-50"
+                }`}
+              >
+                <span aria-hidden="true" className="text-base leading-none">
+                  {cat.emoji}
                 </span>
-              )}
-            </button>
-          );
-        })}
-      </nav>
+                <span className="text-balance">{cat.label}</span>
+                {cat.id === "all" && (
+                  <span
+                    className={`flex-none rounded-full px-2 py-0.5 text-xs font-bold leading-none ${
+                      active ? "bg-brand-900/40 text-emerald-100" : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {PRODUCTS.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Edge fades + scroll chevrons, only while scrolling is possible */}
+        {navScroll.canLeft && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-slate-100 to-transparent"
+          />
+        )}
+        {navScroll.canRight && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-slate-100 to-transparent"
+          />
+        )}
+        {navScroll.canLeft && (
+          <button
+            type="button"
+            onClick={() => scrollCategories(-1)}
+            aria-label="Scroll categories left"
+            className="absolute left-0 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-md transition hover:bg-slate-50"
+          >
+            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+          </button>
+        )}
+        {navScroll.canRight && (
+          <button
+            type="button"
+            onClick={() => scrollCategories(1)}
+            aria-label="Scroll categories right"
+            className="absolute right-0 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-md transition hover:bg-slate-50"
+          >
+            <ChevronRight className="h-5 w-5" aria-hidden="true" />
+          </button>
+        )}
+      </div>
 
       {/* Scrollable products grid */}
       <div className="min-h-0 flex-1 overflow-y-auto pb-4 pt-1 pr-1">
