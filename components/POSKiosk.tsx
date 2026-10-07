@@ -28,11 +28,20 @@ import type {
   Transaction,
 } from "@/lib/types";
 
+/**
+ * Stable server snapshot for useSyncExternalStore. React requires the
+ * same cached value on every call — returning a fresh `[]` each time
+ * makes it re-render in an infinite loop ("getServerSnapshot should
+ * be cached"). The cart is never mutated in place (every update
+ * builds a new array), so sharing one constant is safe.
+ */
+const EMPTY_CART: CartItem[] = [];
+
 export default function POSKiosk() {
   const [screen, setScreen] = useState<Screen>("items");
   // localStorage-backed cart store (survives accidental reloads,
   // SSR-safe via useSyncExternalStore).
-  const cart = useSyncExternalStore(subscribeCart, getCartSnapshot, () => [] as CartItem[]);
+  const cart = useSyncExternalStore(subscribeCart, getCartSnapshot, () => EMPTY_CART);
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const toastId = useRef(0);
